@@ -586,6 +586,7 @@ __metadata:
     express-validator: "npm:^7.2.0"
     http-errors: "npm:~1.6.3"
     jade: "npm:~1.11.0"
+    jose: "npm:^5.9.6"
     mongoose: "npm:^8.8.1"
     morgan: "npm:~1.9.1"
     nodemon: "npm:^3.1.7"
@@ -1056,6 +1057,13 @@ __metadata:
   bin:
     jade: ./bin/jade.js
   checksum: 10c0/f5cdd86fd8cbfbe29882374c932af310f59d4b265f3ac223b01a474a9018f3d9ab085d10014abed9172deb99feea8efe4e53a560aa0c75384272e8778bdfbdce
+  languageName: node
+  linkType: hard
+
+"jose@npm:^5.9.6":
+  version: 5.9.6
+  resolution: "jose@npm:5.9.6"
+  checksum: 10c0/d6bcd8c7d655b5cda8e182952a76f0c093347f5476d74795405bb91563f7ab676f61540310dd4b1531c60d685335ceb600571a409551d2cbd2ab3e9f9fbf1e4d
   languageName: node
   linkType: hard
 

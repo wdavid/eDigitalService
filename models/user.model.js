@@ -35,6 +35,10 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
+    tokens:{
+        type: [String],
+        default: []
+    },
 }, { timestamps: true });
 
 userSchema.methods = {

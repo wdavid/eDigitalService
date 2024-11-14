@@ -1,5 +1,8 @@
 const User = require('../models/user.model');
 
+const { createToken, verifyToken } = require('../utils/jwt.tools');
+
+
 const controller = {};
 
 controller.register = async (req, res, next) => {
@@ -42,7 +45,24 @@ controller.login = async (req, res, next) => {
             return res.status(401).json({ error: "Invalid password" });
         }
 
-        return res.status(200).json({ message: "Login successful"});
+        const token = await createToken(user._id);
+
+        let _tokens = [...user.tokens];
+        const _verifyPromises = _tokens.map(async (_t) => {
+            const status = await verifyToken(_t);
+            return status ? _t : null;
+        });
+
+        _tokens = (await Promise.all(_verifyPromises))
+            .filter(_t => _t)
+            .slice(0, 4);
+
+        _tokens = [token, ..._tokens];
+        user.tokens = _tokens;
+
+        await user.save();
+
+        return res.status(200).json({ token });
     }
     catch (error) {
         console.error(error);

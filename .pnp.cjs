@@ -34,6 +34,7 @@ const RAW_RUNTIME_STATE =
           ["express-validator", "npm:7.2.0"],\
           ["http-errors", "npm:1.6.3"],\
           ["jade", "npm:1.11.0"],\
+          ["jose", "npm:5.9.6"],\
           ["mongoose", "npm:8.8.1"],\
           ["morgan", "npm:1.9.1"],\
           ["nodemon", "npm:3.1.7"]\
@@ -744,6 +745,7 @@ const RAW_RUNTIME_STATE =
           ["express-validator", "npm:7.2.0"],\
           ["http-errors", "npm:1.6.3"],\
           ["jade", "npm:1.11.0"],\
+          ["jose", "npm:5.9.6"],\
           ["mongoose", "npm:8.8.1"],\
           ["morgan", "npm:1.9.1"],\
           ["nodemon", "npm:3.1.7"]\
@@ -1266,6 +1268,15 @@ const RAW_RUNTIME_STATE =
           ["uglify-js", "npm:2.8.29"],\
           ["void-elements", "npm:2.0.1"],\
           ["with", "npm:4.0.3"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["jose", [\
+      ["npm:5.9.6", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/jose-npm-5.9.6-8196c83d4f-10c0.zip/node_modules/jose/",\
+        "packageDependencies": [\
+          ["jose", "npm:5.9.6"]\
         ],\
         "linkType": "HARD"\
       }]\
