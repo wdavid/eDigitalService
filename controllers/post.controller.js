@@ -92,19 +92,22 @@ controller.getDailyConsumption = async (req, res, next) => {
         const dailyConsumption = await Post.aggregate([
             {
                 $match: {
-                    userId: new Mongoose.Types.ObjectId(userId) // Usar new para ObjectId
+                    userId: new Mongoose.Types.ObjectId(userId) // Filtrar por usuario
                 }
             },
             {
                 $group: {
                     _id: {
-                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+                        date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        userId: "$userId" // Incluir userId en el grupo
                     },
                     totalVolumen: { $sum: "$volumen" },
                     totalVasos: { $sum: "$vasos" }
                 }
             },
-            { $sort: { _id: 1 } } // Ordenar por fecha
+            {
+                $sort: { "_id.date": 1 } // Ordenar por fecha
+            }
         ]);
 
         return res.status(200).json(dailyConsumption);
@@ -114,50 +117,78 @@ controller.getDailyConsumption = async (req, res, next) => {
     }
 };
 
+
 controller.getWeeklyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
 
+        // Validar que el userId sea un ObjectId válido
+        if (!Mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: "Invalid userId" });
+        }
+
         const weeklyConsumption = await Post.aggregate([
-            { $match: { userId: new Mongoose.Types.ObjectId(userId) } }, // Filtrar por usuario
-            { $group: {
-                _id: { 
-                    year: { $year: "$fecha" }, // Año
-                    week: { $isoWeek: "$fecha" } // Semana ISO
-                },
-                totalVolumen: { $sum: "$volumen" },
-                totalVasos: { $sum: "$vasos" },
-            }},
-            { $sort: { "_id.year": 1, "_id.week": 1 } } // Ordenar por año y semana
+            {
+                $match: {
+                    userId: new Mongoose.Types.ObjectId(userId) // Filtrar por usuario
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" }, // Año
+                        week: { $isoWeek: "$createdAt" } // Semana ISO
+                    },
+                    totalVolumen: { $sum: "$volumen" },
+                    totalVasos: { $sum: "$vasos" }
+                }
+            },
+            {
+                $sort: { "_id.year": 1, "_id.week": 1 } // Ordenar por año y semana
+            }
         ]);
 
         return res.status(200).json(weeklyConsumption);
     } catch (error) {
-        console.error(error);
+        console.error("Error en getWeeklyConsumption:", error);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
 
 controller.getMonthlyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
 
+        // Validar que el userId sea un ObjectId válido
+        if (!Mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: "Invalid userId" });
+        }
+
         const monthlyConsumption = await Post.aggregate([
-            { $match: { userId: new Mongoose.Types.ObjectId(userId) } }, // Filtrar por usuario
-            { $group: {
-                _id: { 
-                    year: { $year: "$fecha" }, // Año
-                    month: { $month: "$fecha" } // Mes
-                },
-                totalVolumen: { $sum: "$volumen" },
-                totalVasos: { $sum: "$vasos" },
-            }},
-            { $sort: { "_id.year": 1, "_id.month": 1 } } // Ordenar por año y mes
+            {
+                $match: {
+                    userId: new Mongoose.Types.ObjectId(userId) // Filtrar por usuario
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" }, // Año
+                        month: { $month: "$createdAt" } // Mes
+                    },
+                    totalVolumen: { $sum: "$volumen" },
+                    totalVasos: { $sum: "$vasos" }
+                }
+            },
+            {
+                $sort: { "_id.year": 1, "_id.month": 1 } // Ordenar por año y mes
+            }
         ]);
 
         return res.status(200).json(monthlyConsumption);
     } catch (error) {
-        console.error(error);
+        console.error("Error en getMonthlyConsumption:", error);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
