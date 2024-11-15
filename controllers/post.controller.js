@@ -2,6 +2,7 @@ const Post = require('../models/post.model');
 const controller = {};
 const Mongoose = require('mongoose');
 const debug = require('debug')('app:post-controller');
+const User = require('../models/user.model');
 
 // Crear un nuevo registro de consumo
 controller.create = async (req, res, next) => {
@@ -110,7 +111,19 @@ controller.getDailyConsumption = async (req, res, next) => {
             }
         ]);
 
-        return res.status(200).json(dailyConsumption);
+        // Obtener datos del usuario
+        const user = await User.findById(userId).select("username email metaconsumo");
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Combinar la información del usuario con el consumo diario
+        const response = dailyConsumption.map((entry) => ({
+            ...entry,
+            user,
+        }));
+
+        return res.status(200).json(response);
     } catch (error) {
         console.error("Error en getDailyConsumption:", error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -122,7 +135,6 @@ controller.getWeeklyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
 
-        // Validar que el userId sea un ObjectId válido
         if (!Mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid userId" });
         }
@@ -148,7 +160,19 @@ controller.getWeeklyConsumption = async (req, res, next) => {
             }
         ]);
 
-        return res.status(200).json(weeklyConsumption);
+        // Obtener datos del usuario
+        const user = await User.findById(userId).select("username email metaconsumo");
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Combinar datos del usuario con el consumo semanal
+        const response = weeklyConsumption.map((entry) => ({
+            ...entry,
+            user,
+        }));
+
+        return res.status(200).json(response);
     } catch (error) {
         console.error("Error en getWeeklyConsumption:", error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -160,7 +184,6 @@ controller.getMonthlyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
 
-        // Validar que el userId sea un ObjectId válido
         if (!Mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid userId" });
         }
@@ -186,7 +209,19 @@ controller.getMonthlyConsumption = async (req, res, next) => {
             }
         ]);
 
-        return res.status(200).json(monthlyConsumption);
+        // Obtener datos del usuario
+        const user = await User.findById(userId).select("username email metaconsumo");
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Combinar datos del usuario con el consumo mensual
+        const response = monthlyConsumption.map((entry) => ({
+            ...entry,
+            user,
+        }));
+
+        return res.status(200).json(response);
     } catch (error) {
         console.error("Error en getMonthlyConsumption:", error);
         return res.status(500).json({ error: "Internal Server Error" });
