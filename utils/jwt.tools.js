@@ -1,32 +1,30 @@
-const {SignJWT, jwVerify} = require('jose');
+const { SignJWT, jwtVerify } = require('jose');
+const debug = require('debug')('app:jwt-tools');
 
-const secret = new TextEncoder().encode(process.env.TOKEN_SECRET || 'secret');
+// Codifica la clave secreta usando TextEncoder.
+const secret = new TextEncoder().encode(process.env.TOKEN_SECRET || 'Super Secret Value');
 const expTime = process.env.TOKEN_EXP || '15d';
 
 const tools = {}
 
 tools.createToken = async (id) => {
-    try {
-        const token = await new SignJWT({ id })
-            .setProtectedHeader({ alg: 'HS256' }) 
-            .setSubject(id) 
-            .setExpirationTime(expTime)
-            .setIssuedAt()
-            .sign(secret); 
-
-        return token;
-    } catch (error) {
-        console.error('Error al crear el token:', error);
-        throw error;
-    }
+    return await new SignJWT() 
+        .setProtectedHeader({ alg: 'HS256' })
+        .setSubject(id)
+        .setExpirationTime(expTime)
+        .setIssuedAt()
+        .sign(secret);
 }
 
 tools.verifyToken = async (token) => {
     try {
-        const {payload} = await jwVerify(token, secret);
+        const { payload } = await jwtVerify(
+            token,
+            secret,
+        );
         return payload;
     } catch (error) {
-        return false;
+        return false; // Devuelve false o podrías manejar el error de manera más específica.
     }
 }
 

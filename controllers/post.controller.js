@@ -1,11 +1,13 @@
 const Post = require('../models/post.model');
 const controller = {};
 const Mongoose = require('mongoose');
+const debug = require('debug')('app:post-controller');
 
 // Crear un nuevo registro de consumo
 controller.create = async (req, res, next) => {
     try {
         const { userId, volumen, vasos } = req.body;
+        const { user } = req;
 
         // Validar que los datos necesarios estén presentes
         if (!userId || !volumen || !vasos) {

@@ -33,9 +33,8 @@ const userSchema = new Schema({
     },
     salt: {
         type: String,
-        required: true,
     },
-    tokens:{
+    tokens: {
         type: [String],
         default: []
     },
