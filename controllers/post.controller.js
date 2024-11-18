@@ -143,32 +143,56 @@ controller.getWeeklyConsumption = async (req, res, next) => {
             return res.status(400).json({ error: "Invalid userId" });
         }
 
-        // Calcular inicio y fin de la semana
-        const today = new Date();
-        const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Lunes
-        startOfWeek.setHours(0, 0, 0, 0);
-
-        const endOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 7)); // Domingo
-        endOfWeek.setHours(23, 59, 59, 999);
+        // Calcular los últimos 7 días (incluido hoy)
+        const endOfRange = new Date(); // Hoy
+        endOfRange.setHours(23, 59, 59, 999);
+        const startOfRange = new Date();
+        startOfRange.setDate(endOfRange.getDate() - 6); // Hace 6 días (incluido hoy)
+        startOfRange.setHours(0, 0, 0, 0);
 
         const weeklyConsumption = await Post.aggregate([
             {
                 $match: {
                     userId: new Mongoose.Types.ObjectId(userId), // Filtrar por usuario
-                    createdAt: { $gte: startOfWeek, $lte: endOfWeek }, // Filtrar por semana actual
+                    createdAt: { $gte: startOfRange, $lte: endOfRange }, // Últimos 7 días
                 },
             },
             {
                 $group: {
-                    _id: { day: { $dayOfWeek: "$createdAt" } }, // Agrupar por día de la semana
+                    _id: { day: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } } }, // Agrupar por fecha
                     totalVolumen: { $sum: "$volumen" },
                     totalVasos: { $sum: "$vasos" },
                 },
             },
             {
-                $sort: { "_id.day": 1 }, // Ordenar por día de la semana
+                $sort: { "_id.day": 1 }, // Ordenar por fecha
             },
         ]);
+
+        // Crear un mapeo de los días de la semana
+        const daysOfWeek = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+        // Generar los últimos 7 días con sus valores predeterminados
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date();
+            date.setDate(endOfRange.getDate() - i);
+            const dayOfWeek = daysOfWeek[date.getDay()];
+            return {
+                date: date.toISOString().split("T")[0], // Formato YYYY-MM-DD
+                dayOfWeek,
+                totalVolumen: 0,
+                totalVasos: 0,
+            };
+        }).reverse(); // Orden cronológico
+
+        // Rellenar los datos obtenidos en los últimos 7 días
+        weeklyConsumption.forEach((entry) => {
+            const index = last7Days.findIndex((day) => day.date === entry._id.day);
+            if (index !== -1) {
+                last7Days[index].totalVolumen = entry.totalVolumen;
+                last7Days[index].totalVasos = entry.totalVasos;
+            }
+        });
 
         // Obtener datos del usuario
         const user = await User.findById(userId).select("username email metaconsumo");
@@ -178,13 +202,9 @@ controller.getWeeklyConsumption = async (req, res, next) => {
 
         // Construir la respuesta
         const response = {
-            startOfWeek: startOfWeek.toISOString().split("T")[0], // Inicio de la semana (YYYY-MM-DD)
-            endOfWeek: endOfWeek.toISOString().split("T")[0],     // Fin de la semana (YYYY-MM-DD)
-            weeklyConsumption: weeklyConsumption.map((entry) => ({
-                dayOfWeek: entry._id.day, // Día de la semana (1 = Domingo, 2 = Lunes, etc.)
-                totalVolumen: entry.totalVolumen,
-                totalVasos: entry.totalVasos,
-            })),
+            startOfRange: startOfRange.toISOString().split("T")[0], // Inicio de los últimos 7 días
+            endOfRange: endOfRange.toISOString().split("T")[0],     // Fin de los últimos 7 días
+            weeklyConsumption: last7Days,
             user,
         };
 
@@ -205,17 +225,18 @@ controller.getMonthlyConsumption = async (req, res, next) => {
             return res.status(400).json({ error: "Invalid userId" });
         }
 
-        // Calcular el inicio y fin del mes actual
-        const today = new Date();
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); // Primer día del mes
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Último día del mes
-        endOfMonth.setHours(23, 59, 59, 999);
+        // Calcular los últimos 30 días
+        const endOfRange = new Date(); // Hoy
+        endOfRange.setHours(23, 59, 59, 999);
+        const startOfRange = new Date();
+        startOfRange.setDate(endOfRange.getDate() - 29); // Hace 30 días (incluyendo hoy)
+        startOfRange.setHours(0, 0, 0, 0);
 
         const monthlyConsumption = await Post.aggregate([
             {
                 $match: {
                     userId: new Mongoose.Types.ObjectId(userId), // Filtrar por usuario
-                    createdAt: { $gte: startOfMonth, $lte: endOfMonth }, // Filtrar por mes actual
+                    createdAt: { $gte: startOfRange, $lte: endOfRange }, // Últimos 30 días
                 },
             },
             {
@@ -230,6 +251,28 @@ controller.getMonthlyConsumption = async (req, res, next) => {
             },
         ]);
 
+        // Crear los últimos 30 días en formato completo
+        const last30Days = Array.from({ length: 30 }, (_, i) => {
+            const date = new Date();
+            date.setDate(endOfRange.getDate() - i);
+            date.setHours(0, 0, 0, 0);
+            return {
+                date,
+                day: date.getDate(),
+                totalVolumen: 0,
+                totalVasos: 0,
+            };
+        }).reverse(); // Orden cronológico
+
+        // Rellenar datos de consumo
+        monthlyConsumption.forEach((entry) => {
+            const index = last30Days.findIndex((day) => day.day === entry._id.day);
+            if (index !== -1) {
+                last30Days[index].totalVolumen = entry.totalVolumen;
+                last30Days[index].totalVasos = entry.totalVasos;
+            }
+        });
+
         // Obtener datos del usuario
         const user = await User.findById(userId).select("username email metaconsumo");
         if (!user) {
@@ -238,13 +281,9 @@ controller.getMonthlyConsumption = async (req, res, next) => {
 
         // Construir la respuesta
         const response = {
-            startOfMonth: startOfMonth.toISOString().split("T")[0], // Inicio del mes (YYYY-MM-DD)
-            endOfMonth: endOfMonth.toISOString().split("T")[0],     // Fin del mes (YYYY-MM-DD)
-            monthlyConsumption: monthlyConsumption.map((entry) => ({
-                day: entry._id.day, // Día del mes
-                totalVolumen: entry.totalVolumen,
-                totalVasos: entry.totalVasos,
-            })),
+            startOfRange: startOfRange.toISOString().split("T")[0], // Inicio de los últimos 30 días
+            endOfRange: endOfRange.toISOString().split("T")[0],     // Fin de los últimos 30 días
+            monthlyConsumption: last30Days,
             user,
         };
 
