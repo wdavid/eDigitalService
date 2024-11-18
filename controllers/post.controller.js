@@ -81,6 +81,7 @@ controller.deleteById = async (req, res, next) => {
     }
 };
 
+
 controller.getDailyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
@@ -90,25 +91,26 @@ controller.getDailyConsumption = async (req, res, next) => {
             return res.status(400).json({ error: "Invalid userId" });
         }
 
+        // Obtener la fecha de inicio y fin del día actual
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
         const dailyConsumption = await Post.aggregate([
             {
                 $match: {
-                    userId: new Mongoose.Types.ObjectId(userId) // Filtrar por usuario
-                }
+                    userId: new Mongoose.Types.ObjectId(userId), // Filtrar por usuario
+                    createdAt: { $gte: startOfDay, $lte: endOfDay }, // Filtrar por el día de hoy
+                },
             },
             {
                 $group: {
-                    _id: {
-                        date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                        userId: "$userId" // Incluir userId en el grupo
-                    },
+                    _id: null, // No agrupar por fecha, ya que es solo para hoy
                     totalVolumen: { $sum: "$volumen" },
-                    totalVasos: { $sum: "$vasos" }
-                }
+                    totalVasos: { $sum: "$vasos" },
+                },
             },
-            {
-                $sort: { "_id.date": 1 } // Ordenar por fecha
-            }
         ]);
 
         // Obtener datos del usuario
@@ -117,11 +119,13 @@ controller.getDailyConsumption = async (req, res, next) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Combinar la información del usuario con el consumo diario
-        const response = dailyConsumption.map((entry) => ({
-            ...entry,
+        // Construir la respuesta
+        const response = {
+            date: startOfDay.toISOString().split("T")[0], // Formato YYYY-MM-DD
+            totalVolumen: dailyConsumption[0]?.totalVolumen || 0,
+            totalVasos: dailyConsumption[0]?.totalVasos || 0,
             user,
-        }));
+        };
 
         return res.status(200).json(response);
     } catch (error) {
@@ -130,34 +134,40 @@ controller.getDailyConsumption = async (req, res, next) => {
     }
 };
 
-
 controller.getWeeklyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
 
+        // Validar que el userId sea un ObjectId válido
         if (!Mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid userId" });
         }
 
+        // Calcular inicio y fin de la semana
+        const today = new Date();
+        const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Lunes
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 7)); // Domingo
+        endOfWeek.setHours(23, 59, 59, 999);
+
         const weeklyConsumption = await Post.aggregate([
             {
                 $match: {
-                    userId: new Mongoose.Types.ObjectId(userId) // Filtrar por usuario
-                }
+                    userId: new Mongoose.Types.ObjectId(userId), // Filtrar por usuario
+                    createdAt: { $gte: startOfWeek, $lte: endOfWeek }, // Filtrar por semana actual
+                },
             },
             {
                 $group: {
-                    _id: {
-                        year: { $year: "$createdAt" }, // Año
-                        week: { $isoWeek: "$createdAt" } // Semana ISO
-                    },
+                    _id: { day: { $dayOfWeek: "$createdAt" } }, // Agrupar por día de la semana
                     totalVolumen: { $sum: "$volumen" },
-                    totalVasos: { $sum: "$vasos" }
-                }
+                    totalVasos: { $sum: "$vasos" },
+                },
             },
             {
-                $sort: { "_id.year": 1, "_id.week": 1 } // Ordenar por año y semana
-            }
+                $sort: { "_id.day": 1 }, // Ordenar por día de la semana
+            },
         ]);
 
         // Obtener datos del usuario
@@ -166,11 +176,17 @@ controller.getWeeklyConsumption = async (req, res, next) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Combinar datos del usuario con el consumo semanal
-        const response = weeklyConsumption.map((entry) => ({
-            ...entry,
+        // Construir la respuesta
+        const response = {
+            startOfWeek: startOfWeek.toISOString().split("T")[0], // Inicio de la semana (YYYY-MM-DD)
+            endOfWeek: endOfWeek.toISOString().split("T")[0],     // Fin de la semana (YYYY-MM-DD)
+            weeklyConsumption: weeklyConsumption.map((entry) => ({
+                dayOfWeek: entry._id.day, // Día de la semana (1 = Domingo, 2 = Lunes, etc.)
+                totalVolumen: entry.totalVolumen,
+                totalVasos: entry.totalVasos,
+            })),
             user,
-        }));
+        };
 
         return res.status(200).json(response);
     } catch (error) {
@@ -184,29 +200,34 @@ controller.getMonthlyConsumption = async (req, res, next) => {
     try {
         const { userId } = req.params;
 
+        // Validar que el userId sea un ObjectId válido
         if (!Mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid userId" });
         }
 
+        // Calcular el inicio y fin del mes actual
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); // Primer día del mes
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Último día del mes
+        endOfMonth.setHours(23, 59, 59, 999);
+
         const monthlyConsumption = await Post.aggregate([
             {
                 $match: {
-                    userId: new Mongoose.Types.ObjectId(userId) // Filtrar por usuario
-                }
+                    userId: new Mongoose.Types.ObjectId(userId), // Filtrar por usuario
+                    createdAt: { $gte: startOfMonth, $lte: endOfMonth }, // Filtrar por mes actual
+                },
             },
             {
                 $group: {
-                    _id: {
-                        year: { $year: "$createdAt" }, // Año
-                        month: { $month: "$createdAt" } // Mes
-                    },
+                    _id: { day: { $dayOfMonth: "$createdAt" } }, // Agrupar por día del mes
                     totalVolumen: { $sum: "$volumen" },
-                    totalVasos: { $sum: "$vasos" }
-                }
+                    totalVasos: { $sum: "$vasos" },
+                },
             },
             {
-                $sort: { "_id.year": 1, "_id.month": 1 } // Ordenar por año y mes
-            }
+                $sort: { "_id.day": 1 }, // Ordenar por día del mes
+            },
         ]);
 
         // Obtener datos del usuario
@@ -215,11 +236,17 @@ controller.getMonthlyConsumption = async (req, res, next) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Combinar datos del usuario con el consumo mensual
-        const response = monthlyConsumption.map((entry) => ({
-            ...entry,
+        // Construir la respuesta
+        const response = {
+            startOfMonth: startOfMonth.toISOString().split("T")[0], // Inicio del mes (YYYY-MM-DD)
+            endOfMonth: endOfMonth.toISOString().split("T")[0],     // Fin del mes (YYYY-MM-DD)
+            monthlyConsumption: monthlyConsumption.map((entry) => ({
+                day: entry._id.day, // Día del mes
+                totalVolumen: entry.totalVolumen,
+                totalVasos: entry.totalVasos,
+            })),
             user,
-        }));
+        };
 
         return res.status(200).json(response);
     } catch (error) {
