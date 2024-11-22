@@ -10,7 +10,7 @@ router.get('/', postController.findAll);
 
 router.post('/', 
     createPostValidators,
-    authentication,
+    //authentication,
     postController.create
 );
 
